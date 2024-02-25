@@ -4,6 +4,38 @@
 #include <QFile>
 #include <QDataStream>
 
+
+ProxyModel::ProxyModel(QObject* parent /* = nullptr */) : QSortFilterProxyModel(parent)
+{
+
+}
+
+bool ProxyModel::filterAcceptsRow(int source_row, const QModelIndex &source_parent) const{
+    auto sModel = sourceModel();
+
+    
+    // return sModel->data(sModel->index(source_row, 0), Qt::CheckStateRole).toBool();
+    return true;
+}
+
+bool ProxyModel::lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const{
+    QVariant leftData = sourceModel()->data(source_left);
+    QVariant rightData = sourceModel()->data(source_right);
+
+    switch (leftData.userType())
+    {
+        case QMetaType::QDateTime:
+            return leftData.toDateTime() < rightData.toDateTime();
+        case QMetaType::QString:
+            return QString::localeAwareCompare(leftData.toString(), rightData.toString()) < 0;
+        case QMetaType::Bool:
+            return leftData.toBool() < rightData.toBool();
+    };
+    return true;
+
+}
+
+
 TaskManager::TaskManager(QObject *parent)
     : QAbstractListModel(parent)
 {
@@ -43,26 +75,46 @@ bool TaskManager::setData(const QModelIndex &index, const QVariant &value, int r
     if (!index.isValid()) return false;
 
     Task* task = _tasks[index.row()];
-    bool result = false;
 
     switch(role){
         case Qt::CheckStateRole:
-            result = task->setCompleted(value.toBool());
+            return task->isCompleted() ? task->setCompleted(false) : task->setCompleted(true);
+        break;
         default:
             return false;
     };
-    if (result) dataChanged(index, index);
 }
 
 void TaskManager::addTask(Task *const pNewTask){
     if (pNewTask){
-
-        _tasks.push_back(pNewTask);
-        auto newRow = _tasks.size() - 1;
-        emit dataChanged(index(newRow), index(newRow));
+        size_t newRowIndex =  _tasks.size();
+        if (insertRow(newRowIndex))
+            _tasks[newRowIndex] = pNewTask;
     }
 }
 
+bool TaskManager::insertRows(int row, int count, const QModelIndex &parent)
+{   
+    if (row < 0 || row > rowCount(parent) || count <= 0)
+        return false;
+
+    beginInsertRows(parent, row, row + count - 1);
+    for (int i = 0; i < count; ++i)
+        _tasks.insert(row++, nullptr);
+    endInsertRows();
+
+    return true;
+}
+
+bool TaskManager:: removeRows(int row, int count, const QModelIndex &parent /* = QModelIndex()*/)
+{   
+    beginRemoveRows(parent, row, row + count - 1);
+    for ( int i =0; i < count; ++i)
+        _tasks.removeAt(row++);
+    endRemoveRows();
+    
+    return true;
+}
 
 Qt::ItemFlags TaskManager::flags(const QModelIndex& index) const{
     Qt::ItemFlags defaultFlags = QAbstractListModel::flags(index);
@@ -71,7 +123,6 @@ Qt::ItemFlags TaskManager::flags(const QModelIndex& index) const{
         return  Qt::ItemIsEnabled | Qt::ItemIsUserCheckable;
     return defaultFlags;
 }
-
 
 Task* TaskManager::task(const QModelIndex& index){
     return (index.isValid() && index.row() < rowCount()) ? _tasks[index.row()] : nullptr;
@@ -83,8 +134,14 @@ void TaskManager::taskChanged(const QModelIndex& changedIndex){
     }
 }
 
+void TaskManager::deleteTask(const QModelIndex& removingIndex){
+    if(removeRow(removingIndex.row()))
+        emit taskDeleted();
+    
+}
+
 void TaskManager::saveModel(){
-    QFile file("savedData");
+    QFile file("db");
 
     file.open(QIODevice::WriteOnly);
     QDataStream stream(&file);
@@ -97,7 +154,7 @@ void TaskManager::saveModel(){
 }
 
 void TaskManager::loadModel(){
-    QFile file("savedData");
+    QFile file("db");
     file.open(QIODevice::ReadOnly);
     QDataStream stream(&file);
 

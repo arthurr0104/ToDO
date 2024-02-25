@@ -19,21 +19,33 @@ TaskEditWidget::TaskEditWidget(TaskManager* const pTaskManager,  QWidget* parent
     _taskNameEdit = new QLineEdit(this);
     _taskState = new QCheckBox(this);
     _confirmChangesBtn = new QPushButton("Confirm", this);
+    _deleteTaskBtn = new QPushButton("Delete", this);
     QVBoxLayout *mainLayout = new QVBoxLayout;
     QHBoxLayout *nameAndStateLayout = new QHBoxLayout;
+    QHBoxLayout *confirmAndDeleteLayout = new QHBoxLayout;
 
     _taskDescriptionEdit->setPlaceholderText("Add note");
+    _taskDueDateEdit->setMaximumWidth(130);
+    // _taskDescriptionEdit->setMaximumHeight(400);
     nameAndStateLayout->addWidget(_taskState);
     nameAndStateLayout->addWidget(_taskNameEdit);
 
-    mainLayout->addWidget(new QLabel("Edit the task:"));
+    confirmAndDeleteLayout->addWidget(_confirmChangesBtn);
+    confirmAndDeleteLayout->addWidget(_deleteTaskBtn);
+
     mainLayout->addLayout(nameAndStateLayout);
     mainLayout->addWidget(_taskDescriptionEdit);
     mainLayout->addWidget(_taskDueDateEdit);
-    mainLayout->addWidget(_confirmChangesBtn);
+    mainLayout->addLayout(confirmAndDeleteLayout);
     setLayout(mainLayout);
 
     connect(_confirmChangesBtn, &QPushButton::clicked, this,  &TaskEditWidget::confirmChanges);
+    connect(_deleteTaskBtn, &QPushButton::clicked, [=](){
+                                                            emit deleteClicked(_editingTaskIndex);
+                                                            _editingTask = nullptr;
+                                                            _editingTaskIndex = QModelIndex();
+                                                            hide();
+                                                        });
     connect(this, &TaskEditWidget::changesConfirmed, _taskManager, &TaskManager::taskChanged);
     setWindowTitle("Edit the task");
     hide();

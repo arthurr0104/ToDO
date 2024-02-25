@@ -22,7 +22,6 @@ public:
 public slots:
     void addTask();
 
-
 private:
     TaskManager* _taskManager;
     QListView* _tasksView;

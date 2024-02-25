@@ -5,6 +5,20 @@
 
 #include <QAbstractListModel>
 #include <QList>
+#include <QSortFilterProxyModel>
+
+
+class ProxyModel : public QSortFilterProxyModel {
+    Q_OBJECT
+
+public:
+    ProxyModel(QObject *parent = nullptr);
+
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const;
+
+    bool lessThan(const QModelIndex &source_left, const QModelIndex &source_right) const;
+
+};
 
 class TaskManager : public QAbstractListModel
 {
@@ -20,9 +34,16 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const override;
     void addTask(Task *const pNewTask);
     Task* task(const QModelIndex& index);
+    bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+
+signals:
+    void taskDeleted();
     
 public slots:
     void taskChanged(const QModelIndex& changedIndex);
+
+    void deleteTask(const QModelIndex& removingIndex);
 
 private:
     QList<Task*> _tasks;

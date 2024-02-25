@@ -21,6 +21,7 @@ public:
 
 signals:
     void changesConfirmed(const QModelIndex&);
+    void deleteClicked(const QModelIndex&);
 
 public slots:
     void openTaskEditingToolBar(const QModelIndex& );
@@ -34,6 +35,7 @@ private:
     QTextEdit* _taskDescriptionEdit;
     QDateTimeEdit* _taskDueDateEdit;
     QPushButton* _confirmChangesBtn;
+    QPushButton* _deleteTaskBtn;
     TaskManager *_taskManager;
     Task* _editingTask;
     QModelIndex _editingTaskIndex;
